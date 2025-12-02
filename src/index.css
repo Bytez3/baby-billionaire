@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .bg-home-hero {
+    background-image: url('/assets/Treasury.webp');
+    background-repeat: no-repeat;
+    background-position: top center;
+    background-size: cover;
+    /* <-- use cover for responsiveness */
+  }
+}
+
+@layer utilities {
+  .bg-nav {
+    background-image: url('/assets/navvv.svg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: top center;
+    height: 100%;
+    border-radius : 34px;
+    border: 2px solid #FFAE7E80;
+  }
+}
+
+@layer utilities {
+  .text-stroke-light {
+    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.4);
+    /* light white */
+    text-stroke: 1px rgba(255, 255, 255, 0.4);
+  }
+}
+
+@layer utilities {
+  .bg-dashboard-frame {
+    background-image: url('/assets/dashboard-frame.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-position: center;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+
+@layer base {
+  .luckiest-guy-regular {
+    font-family: "Luckiest Guy", cursive;
+    font-weight: 400;
+    font-style: normal;
+  }
+}
+
+@layer utilities {
+  .text-stroke-orange {
+    -webkit-text-stroke: 2px #FF5F00;
+    /* stroke thickness + color */
+    paint-order: stroke fill;
+  }
+}
+
+/* Hide scrollbar but keep scroll functionality */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE / Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+
+.wallet-button-custom .wallet-adapter-button {
+  background: transparent !important;
+  padding: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  font-weight: 400 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Font sizes */
+.wallet-button-custom .wallet-adapter-button {
+  font-size: 14px !important;
+}
+
+@media (min-width: 640px) { /* sm */
+  .wallet-button-custom .wallet-adapter-button {
+    font-size: 14px !important;
+  }
+}
