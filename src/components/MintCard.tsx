@@ -166,14 +166,17 @@ export default function MintCard({ stage, selectedImage }: Props) {
         wrappedInstructions.push(...items)
       }
 
-      // Build transaction
+      // Build transaction with latest blockhash
       const builder = transactionBuilder()
         .add(setComputeUnitPrice(umi, { microLamports: 200_000 }))
         .add(setComputeUnitLimit(umi, { units: 400_000 + count * 200_000 }))
         .add(wrappedInstructions)
 
+      // Set latest blockhash before building (required for transaction)
+      const builderWithBlockhash = await builder.setLatestBlockhash(umi)
+      
       // Build the Umi transaction (unsigned)
-      const umiTransaction = await builder.build(umi)
+      const umiTransaction = await builderWithBlockhash.build(umi)
       
       // Convert to Web3.js VersionedTransaction for explicit signing control
       let web3Transaction = toWeb3JsTransaction(umiTransaction)
