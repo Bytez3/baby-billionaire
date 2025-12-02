@@ -21,13 +21,17 @@ import {
   setComputeUnitLimit,
   setComputeUnitPrice,
 } from '@metaplex-foundation/mpl-toolbox'
-import { base58 } from '@metaplex-foundation/umi/serializers'
+import {
+  toWeb3JsTransaction,
+  toWeb3JsKeypair,
+} from '@metaplex-foundation/umi-web3js-adapters'
 import { apiClient } from '../lib/axios'
 import type { Stage } from '../types'
 import { useGetWhitelistedUser } from '../hooks/useGetWhitelistedUser'
 import { useWalletBalance } from '../hooks/useWalletBalance'
 import { WHITELIST_SALE_START, PUBLIC_SALE_START } from '../constants'
 import { useGetMintStats } from '../hooks/useGetMintStats'
+import { connection } from '../constants'
 
 type Props = {
   stage?: Stage
@@ -39,7 +43,7 @@ export default function MintCard({ stage, selectedImage }: Props) {
   const [minting, setMinting] = useState(false)
   const [agree, setAgree] = useState(false)
 
-  const { connected, publicKey: userAddress } = useWallet()
+  const { connected, publicKey: userAddress, signTransaction } = useWallet()
   const umi = useUmi()
   const { candyMachineQuery, candyGuardQuery } = useCandyMachine()
 
@@ -168,37 +172,38 @@ export default function MintCard({ stage, selectedImage }: Props) {
         .add(setComputeUnitLimit(umi, { units: 400_000 + count * 200_000 }))
         .add(wrappedInstructions)
 
-      // Build transaction WITHOUT signing yet
-      let transaction = await builder.build(umi)
+      // Build the Umi transaction (unsigned)
+      const umiTransaction = await builder.build(umi)
       
-      // STEP 1: Phantom wallet signs FIRST (recommended by Phantom's Lighthouse security)
-      // This ensures compatibility with Phantom's security system
-      transaction = await umi.identity.signTransaction(transaction)
+      // Convert to Web3.js VersionedTransaction for explicit signing control
+      let web3Transaction = toWeb3JsTransaction(umiTransaction)
+      
+      // Convert NFT mint signers to Web3.js Keypairs
+      const nftMintKeypairs = nftsToMint.map((signer) => toWeb3JsKeypair(signer))
+
+      // STEP 1: Phantom wallet signs FIRST (required by Phantom's Lighthouse security)
+      // This MUST happen before any other signers to avoid security warnings
+      if (!signTransaction) {
+        throw new Error('Wallet does not support transaction signing')
+      }
+      web3Transaction = await signTransaction(web3Transaction)
       
       // STEP 2: Additional signers (NFT mints) sign AFTERWARD using partialSign
-      // This follows the correct signing order: Phantom first, then additional signers
-      for (const nftMint of nftsToMint) {
-        transaction = await nftMint.signTransaction(transaction)
-      }
+      // This follows Phantom's recommended signing order
+      web3Transaction.sign(nftMintKeypairs)
 
       // Send the fully signed transaction
-      const sig = await umi.rpc.sendTransaction(transaction)
-      const sigString = base58.deserialize(sig)[0]
+      const signature = await connection.sendRawTransaction(
+        web3Transaction.serialize(),
+        { skipPreflight: false }
+      )
+      const sigString = signature
 
-      let confirming = true
-      while (confirming) {
-        const [updatedStatus] = await umi.rpc.getSignatureStatuses([sig])
-
-        if (updatedStatus && updatedStatus.commitment === 'finalized') {
-          confirming = false
-        }
-        if (updatedStatus?.error) {
-          throw new Error(
-            `Transaction failed: ${updatedStatus.error.toString()}`,
-          )
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Wait for transaction confirmation
+      const confirmation = await connection.confirmTransaction(signature, 'finalized')
+      
+      if (confirmation.value.err) {
+        throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`)
       }
 
       if (stage === 'jkp') {
